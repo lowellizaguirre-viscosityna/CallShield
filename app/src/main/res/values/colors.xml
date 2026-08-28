@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="shield_blue">#0B57D0</color>
+    <color name="shield_blue_dark">#073B8C</color>
+    <color name="surface">#F7F9FC</color>
+</resources>

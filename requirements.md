@@ -1,0 +1,1 @@
+whenever we make a change, popualte two documents. create a change.md, that summarizes the change we made. also, create and keep up to date the actula original prompt, so that we can track the requests that we made seperately. each of those should also track the timestamp of when it occurred.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CallShield" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#A8C7FA</item>
+        <item name="android:statusBarColor">#102A43</item>
+        <item name="android:navigationBarColor">#101418</item>
+    </style>
+</resources>
