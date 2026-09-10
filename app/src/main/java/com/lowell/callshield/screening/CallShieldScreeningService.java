@@ -21,8 +21,8 @@ public final class CallShieldScreeningService extends CallScreeningService {
         }
 
         ScreeningAction action = ScreeningAction.ALLOW;
+        SettingsStore store = new SettingsStore(this);
         try {
-            SettingsStore store = new SettingsStore(this);
             String number = details.getHandle() == null
                     ? null
                     : details.getHandle().getSchemeSpecificPart();
@@ -37,6 +37,11 @@ public final class CallShieldScreeningService extends CallScreeningService {
         } catch (RuntimeException exception) {
             Log.e(TAG, "Screening failed; allowing call", exception);
         } finally {
+            try {
+                store.recordIncomingCall(action);
+            } catch (RuntimeException exception) {
+                Log.e(TAG, "Could not record call statistics", exception);
+            }
             respondToCall(details, CallResponseFactory.create(action));
         }
     }

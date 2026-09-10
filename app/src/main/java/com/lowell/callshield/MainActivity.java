@@ -1,13 +1,10 @@
 package com.lowell.callshield;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.role.RoleManager;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -26,19 +23,14 @@ import android.widget.TextView;
 import com.lowell.callshield.data.SettingsStore;
 import com.lowell.callshield.domain.RuleSettings;
 import com.lowell.callshield.domain.ScreeningAction;
-import com.lowell.callshield.audio.FaxTonePlayer;
-import com.lowell.callshield.audio.FaxButtonService;
+import com.lowell.callshield.domain.CallStatistics;
 
 public final class MainActivity extends Activity {
     private static final int ROLE_REQUEST_CODE = 100;
-    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 101;
-
     private SettingsStore store;
     private TextView roleStatus;
     private Button activateButton;
-    private Button faxPreviewButton;
-    private Button enableFaxControlButton;
-    private FaxTonePlayer faxTonePlayer;
+    private TextView callStatistics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +43,7 @@ public final class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         updateRoleStatus();
+        updateCallStatistics();
     }
 
     private View buildContent() {
@@ -75,6 +68,13 @@ public final class MainActivity extends Activity {
         activateButton.setText("Activate call screening");
         activateButton.setOnClickListener(view -> requestScreeningRole());
         content.addView(activateButton, matchWrap());
+
+        content.addView(space(24));
+        content.addView(sectionTitle("Call activity"));
+        callStatistics = text("", 16, Typeface.NORMAL);
+        content.addView(callStatistics);
+        content.addView(body("Counts begin when CallShield is active. Blocked calls are calls rejected by a rule."));
+        updateCallStatistics();
 
         content.addView(space(24));
         content.addView(sectionTitle("Automatic rules"));
@@ -118,14 +118,8 @@ public final class MainActivity extends Activity {
                 settings.matchedCallAction() == ScreeningAction.REJECT);
         RadioButton silence = radio("Silence the ringer", ScreeningAction.SILENCE,
                 settings.matchedCallAction() == ScreeningAction.SILENCE);
-        RadioButton answerWithFax = new RadioButton(this);
-        answerWithFax.setId(View.generateViewId());
-        answerWithFax.setText("Answer and play fax sound for 30 seconds — unavailable on cellular calls");
-        answerWithFax.setTextSize(16);
-        answerWithFax.setEnabled(false);
         actions.addView(reject);
         actions.addView(silence);
-        actions.addView(answerWithFax);
         actions.setOnCheckedChangeListener((group, checkedId) -> {
             View checked = group.findViewById(checkedId);
             if (checked != null && checked.getTag() instanceof ScreeningAction action) {
@@ -133,22 +127,10 @@ public final class MainActivity extends Activity {
             }
         });
         content.addView(actions);
-        content.addView(body("Android does not let a third-party screening app answer a carrier call or send generated audio to the caller. You can preview the exact 30-second fax calling tone below."));
-        faxPreviewButton = new Button(this);
-        faxPreviewButton.setText("Preview fax sound (30 seconds)");
-        faxPreviewButton.setOnClickListener(view -> toggleFaxPreview());
-        content.addView(faxPreviewButton, matchWrap());
-
-        enableFaxControlButton = new Button(this);
-        enableFaxControlButton.setText("Enable call-time fax button");
-        enableFaxControlButton.setOnClickListener(view -> enableFaxNotificationControl());
-        content.addView(enableFaxControlButton, matchWrap());
-        content.addView(body("This adds a persistent notification. After answering, turn on speakerphone, pull down notifications, and tap Play fax (30 sec). Results vary because the sound reaches the caller acoustically through the microphone."));
 
         content.addView(space(24));
         content.addView(sectionTitle("Platform limitations"));
         content.addView(body("Private, hidden, unavailable, and payphone presentations are not passed to third-party screening apps, so CallShield cannot reliably filter them."));
-        content.addView(body("Answering a cellular call and transmitting fax audio is not available through Android's public call-screening APIs. This version does not claim to provide it."));
         Button systemSettings = new Button(this);
         systemSettings.setText("Open caller ID & spam settings");
         systemSettings.setOnClickListener(view -> openSystemSettings());
@@ -157,76 +139,15 @@ public final class MainActivity extends Activity {
         return scroll;
     }
 
-    @Override
-    protected void onDestroy() {
-        stopFaxPreview();
-        super.onDestroy();
-    }
-
-    private void toggleFaxPreview() {
-        if (faxTonePlayer != null) {
-            stopFaxPreview();
-            return;
-        }
-        try {
-            faxTonePlayer = new FaxTonePlayer();
-            faxPreviewButton.setText("Stop fax sound");
-            faxTonePlayer.play(() -> {
-                faxTonePlayer = null;
-                if (faxPreviewButton != null) {
-                    faxPreviewButton.setText("Preview fax sound (30 seconds)");
-                }
-            });
-        } catch (RuntimeException exception) {
-            stopFaxPreview();
-            faxPreviewButton.setText("Fax preview unavailable on this device");
-            faxPreviewButton.setEnabled(false);
-        }
-    }
-
-    private void stopFaxPreview() {
-        if (faxTonePlayer != null) {
-            faxTonePlayer.close();
-            faxTonePlayer = null;
-        }
-        if (faxPreviewButton != null) {
-            faxPreviewButton.setText("Preview fax sound (30 seconds)");
-        }
-    }
-
-    private void enableFaxNotificationControl() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_REQUEST_CODE);
-            return;
-        }
-        startFaxButtonService();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode,
-            String[] permissions,
-            int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startFaxButtonService();
-            } else {
-                enableFaxControlButton.setText("Notification permission required");
-            }
-        }
-    }
-
-    private void startFaxButtonService() {
-        Intent intent = FaxButtonService.createIntent(this, FaxButtonService.ACTION_SHOW);
-        startForegroundService(intent);
-        enableFaxControlButton.setText("Call-time fax button enabled");
-        enableFaxControlButton.setEnabled(false);
+    private void updateCallStatistics() {
+        if (callStatistics == null) return;
+        CallStatistics statistics = store.getCallStatistics();
+        callStatistics.setText(
+                "Calls received: " + statistics.receivedTotal()
+                        + "\nCalls blocked: " + statistics.blockedTotal()
+                        + "\nBlocked in the last 24 hours: " + statistics.blockedLastDay()
+                        + "\nBlocked in the last 7 days: " + statistics.blockedLast7Days()
+                        + "\nBlocked in the last 30 days: " + statistics.blockedLast30Days());
     }
 
     private View ruleSwitch(String title, String description, boolean checked, BooleanConsumer onChange) {
