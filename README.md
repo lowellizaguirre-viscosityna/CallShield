@@ -11,7 +11,7 @@ i really wanted to do something like play a fax sound on pickup, but that is not
 no tracking, no phone home, no subscription.
 just simple and free. it has been working very well for me for the last six months.
 
-![callshield_screenshot.png](/media/lowell/storage/github/CallShield/callshield_screenshot.png)
+![CallShield screenshot](callshield_screenshot.png)
 
 ## Version 0.1 features
 
