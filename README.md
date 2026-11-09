@@ -1,6 +1,17 @@
 # CallShield
 
-CallShield is an Android 10+ call-screening MVP. It uses Android's public `CallScreeningService` API to apply local rules to screenable incoming calls.
+CallShield is an Android 10+ call-screening MVP. It uses Android's public `CallScreeningService` API to apply local rules to screenable incoming calls.  
+
+I wanted an applciation that woudl simpyl block peopel not in my contacts list: that avoided effectively ALL spam and spoof cals for me.  
+you will have to turn it off, if for example, you were in a job search and needed to allow recruiters to call you, or if you were expecting a repairman or something to return your call.  
+
+The app is free, install it yourself, and only for android.  
+i really wanted to do something like play a fax sound on pickup, but that is not allowed by androids built in rules(even though they can inject a voice bot that can screen calls) . so the only thing i could do is actively block.
+
+no tracking, no phone home, no subscription.
+just simple and free. it has been working very well for me for the last six months.
+
+![callshield_screenshot.png](/media/lowell/storage/github/CallShield/callshield_screenshot.png)
 
 ## Version 0.1 features
 
